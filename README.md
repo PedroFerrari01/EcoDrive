@@ -1,87 +1,74 @@
-# EcoDrive | Sistema de Gestão Operacional de Frotas
+# EcoDrive
 
-![Java](https://img.shields.io/badge/java-%23ED8B00.svg?style=for-the-badge&logo=openjdk&logoColor=white)
-![MySQL](https://img.shields.io/badge/mysql-%234479A1.svg?style=for-the-badge&logo=mysql&logoColor=white)
+Aplicação desktop para cadastrar e acompanhar a frota de uma empresa: marca, modelo, placa, ano e quilometragem de cada veículo, com cadastro, consulta, edição e exclusão. Feito em Java com Swing, MySQL e JDBC.
 
-Aplicação desktop desenvolvida em Java (Swing) e banco de dados relacional MySQL para controle operacional, monitoramento e gestão logística de frotas veiculares comerciais.
+![Java](https://img.shields.io/badge/Java_17+-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL_8-4479A1?style=flat-square&logo=mysql&logoColor=white)
 
-## 📌 Contexto e Problema de Negócio
+![Tela do EcoDrive com um veículo selecionado](docs/tela.png)
 
-No cenário de gestão logística e frotas comerciais, pequenas e médias empresas frequentemente enfrentam sérios problemas pela falta de controle centralizado sobre seus veículos. A ausência de um registro organizado de quilometragem, ano e identificação dos automóveis resulta em:
-*   Manutenções preventivas atrasadas;
-*   Depreciação acelerada dos ativos;
-*   Aumento imprevisto de custos operacionais.
+*Ao selecionar um veículo na tabela, os campos são preenchidos para editar ou excluir. Veículos de exemplo.*
 
-O EcoDrive foi desenvolvido para solucionar essa dor: uma aplicação desktop ágil, intuitiva e segura que centraliza a frota sem a complexidade desnecessária de grandes ERPs, permitindo cadastrar, consultar, atualizar e remover veículos com persistência de dados em tempo real.
+## O que este projeto mostra
 
-## 🏗️ Arquitetura e Engenharia do Software
+- CRUD completo ligado a um banco MySQL via JDBC.
+- Tabela da tela sincronizada com o banco.
+- Placa única no banco (`UNIQUE`), para não cadastrar o mesmo veículo duas vezes.
 
-O sistema adota uma arquitetura integrada, dividida em três pilares fundamentais:
-*   **Interface Gráfica (Camada Visual):** Construída com Java Swing (`JFrame`). Utiliza gerenciadores de layout (`BorderLayout` e `GridLayout`) combinando campos de entrada (`JTextField`) para captura de dados (Marca, Modelo, Placa, Ano e KM), tabela dinâmica com sincronização síncrona (`JTable` e `DefaultTableModel`) e escuta de eventos de linha (`ListSelectionListener`).
-*   **Camada de Conexão (Driver JDBC):** Comunicação estabelecida via protocolo TCP/IP (porta padrão 3306) utilizando o driver `mysql-connector-j` através da API nativa `java.sql` (`Connection`, `Statement`, `ResultSet`).
-*   **Camada de Persistência (Banco de Dados):** Banco de dados relacional `ecodrive_db` com a tabela veiculos, estruturada com chave primária autoincremental e constraint de unicidade (`UNIQUE`) para a placa do automóvel.
+## Contexto
 
-## 🔄 Fluxo de Operações (CRUD)
+Pequenas e médias empresas com frota própria costumam perder o controle de quilometragem, ano e identificação dos veículos, o que atrasa manutenções e aumenta custos. O EcoDrive centraliza esses dados numa aplicação simples, sem a complexidade de um ERP.
 
-| Operação | Componente / Ação | Comando SQL / Regra |
+## Arquitetura
+
+- **Interface (Swing):** `JFrame` com `BorderLayout` e `GridLayout`; campos `JTextField` para marca, modelo, placa, ano e KM; `JTable` com `DefaultTableModel`; um `ListSelectionListener` preenche os campos quando uma linha é selecionada.
+- **Conexão (JDBC):** `mysql-connector-j` com a API `java.sql` (`Connection`, `Statement`, `ResultSet`).
+- **Banco (MySQL):** banco `ecodrive_db` com a tabela `veiculos`.
+
+## Operações
+
+| Operação | Na tela | No banco |
 | :--- | :--- | :--- |
-| **Create** (Salvar) | Botão Salvar (novo registro) | Captura dados da tela, converte inteiros com `Integer.parseInt()` e executa `INSERT INTO veiculos (...)`. |
-| **Read** (Listar) | Disparo de `atualizarTabela()` | Executa `SELECT * FROM veiculos` via `ResultSet`, percorrendo os registros e populando o grid visual. |
-| **Update** (Atualizar) | Seleção na tabela + Botão Atualizar | Captura o ID do veículo selecionado, preenche os inputs e dispara `UPDATE veiculos SET ... WHERE id = X`. |
-| **Delete** (Excluir) | Seleção na tabela + Botão Excluir | Remove permanentemente o registro do banco através de `DELETE FROM veiculos WHERE id = X`. |
+| Salvar | Preenche os campos e clica em Salvar | `INSERT INTO veiculos (...)` |
+| Listar | A tabela é recarregada após cada operação | `SELECT * FROM veiculos` |
+| Atualizar | Seleciona a linha, altera os campos e clica em Atualizar | `UPDATE veiculos SET ... WHERE id = (id selecionado)` |
+| Excluir | Seleciona a linha e clica em Excluir | `DELETE FROM veiculos WHERE id = (id selecionado)` |
+| Limpar | Esvazia os campos para um novo cadastro | — |
 
-## 🛠️ Tecnologias Utilizadas
+## Banco de dados
 
-- **Linguagem:** Java (JDK 17+)
-- **Interface Gráfica:** Java Swing
-- **Banco de Dados:** MySQL
-- **Conector de Banco:** MySQL Connector/J (`mysql-connector-j-9.7.0.jar`)
-- **Versionamento:** Git & GitHub
-
-## 🗄️ Estrutura do Banco de Dados
-
-O script SQL para criação da base e tabela está disponível no repositório no arquivo `script.sql`:
+O script está em `script.sql`:
 
 ```sql
-CREATE DATABASE IF NOT EXISTS ecodrive_db; 
+CREATE DATABASE IF NOT EXISTS ecodrive_db;
 USE ecodrive_db;
 
-CREATE TABLE IF NOT EXISTS veiculos ( 
-    id INT AUTO_INCREMENT PRIMARY KEY, 
-    marca VARCHAR(100) NOT NULL, 
-    modelo VARCHAR(100) NOT NULL, 
-    placa VARCHAR(20) NOT NULL UNIQUE, 
-    ano INT NOT NULL, 
-    quilometragem INT NOT NULL 
+CREATE TABLE IF NOT EXISTS veiculos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    marca VARCHAR(100) NOT NULL,
+    modelo VARCHAR(100) NOT NULL,
+    placa VARCHAR(20) NOT NULL UNIQUE,
+    ano INT NOT NULL,
+    quilometragem INT NOT NULL
 );
 ```
 
-## 🚀 Passo a Passo — Como Rodar a Aplicação
+## Como rodar
 
-**1. Configurar o Banco de Dados no MySQL Workbench**
-*   Abra o MySQL Workbench e conecte-se à sua instância local.
-*   Abra uma nova aba de consulta SQL, cole os comandos de criação do banco acima (ou abra o arquivo `script.sql`) e clique no ícone do Raio (Execute).
-*   Verifique se as tabelas foram criadas com sucesso no Schema `ecodrive_db`.
+Pré-requisitos: JDK 17+, MySQL 8 e o driver [MySQL Connector/J](https://dev.mysql.com/downloads/connector/j/) (`.jar`).
 
-**2. Configurar a Senha no Código Java**
-*   Abra o projeto no VS Code (ou em sua IDE de preferência).
-*   Abra o arquivo `EcoDriveApp.java`.
-*   Verifique as credenciais de conexão nas variáveis de classe e ajuste a senha conforme a sua instalação local:
-```java
-private String url = "jdbc:mysql://localhost:3306/ecodrive_db";
-private String usuario = "root";
-private String senha = "root";
-```
-*   Salve as alterações no arquivo (Ctrl + S).
+1. Rode `script.sql` no MySQL.
+2. Em `EcoDriveApp.java`, ajuste o usuário e a senha do seu MySQL nas variáveis de conexão.
+3. Com o `.jar` do Connector/J na mesma pasta do `EcoDriveApp.java`:
+   - Windows: `java -cp "mysql-connector-j.jar;." EcoDriveApp.java`
+   - Linux/macOS: `java -cp "mysql-connector-j.jar:." EcoDriveApp.java`
 
-**3. Executar pelo Terminal / VS Code**
-*   Certifique-se de que o arquivo do conector `mysql-connector-j-9.7.0.jar` e o arquivo `EcoDriveApp.java` estejam no mesmo diretório.
-*   Abra o terminal integrado do VS Code (Terminal -> New Terminal).
-*   Execute o comando correspondente ao seu sistema operacional:
-    *   **No Windows:** `java -cp "mysql-connector-j-9.7.0.jar;." EcoDriveApp.java`
-    *   **No Linux / macOS:** `java -cp "mysql-connector-j-9.7.0.jar:." EcoDriveApp.java`
-*   A janela gráfica do EcoDrive será inicializada pronta para uso.
+## Material de apresentação
 
-## 📄 Material de Apresentação
+Os slides com o estudo de caso estão em `EcoDrive Apresentacao.pdf`.
 
-Os slides completos com o estudo de caso e proposta do projeto estão disponíveis no arquivo `EcoDrive Apresentacao.pdf`.
+## Próximos passos
+
+- [ ] Separar o código em camadas (`model`, `dao`, `ui`), como no RH Folha e no Clínica Vida
+- [ ] Ler a conexão de um arquivo de configuração fora do Git, em vez de deixar no código
+- [ ] Registro de manutenções e alerta por quilometragem

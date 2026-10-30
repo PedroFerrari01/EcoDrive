@@ -1,9 +1,6 @@
-# EcoDrive
+<img src="docs/banner.png" alt="EcoDrive: cadastro de frota com CRUD completo ligado ao MySQL. Java, Swing, MySQL e JDBC" width="100%">
 
 Aplicação desktop para cadastrar e acompanhar a frota de uma empresa: marca, modelo, placa, ano e quilometragem de cada veículo, com cadastro, consulta, edição e exclusão. Feito em Java com Swing, MySQL e JDBC.
-
-![Java](https://img.shields.io/badge/Java_17+-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL_8-4479A1?style=flat-square&logo=mysql&logoColor=white)
 
 ![Tela do EcoDrive com um veículo selecionado](docs/tela.png)
 

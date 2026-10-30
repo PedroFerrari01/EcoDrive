@@ -69,3 +69,5 @@ Os slides com o estudo de caso estão em `EcoDrive Apresentacao.pdf`.
 
 - [ ] Separar o código em camadas (`model`, `dao`, `ui`), como no RH Folha e no Clínica Vida
 - [ ] Registro de manutenções e alerta por quilometragem
+- [ ] Testes automatizados (JUnit) e Maven
+- [ ] Busca e filtro por placa, marca ou ano

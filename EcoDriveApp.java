@@ -1,5 +1,9 @@
 import java.awt.*;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.*;
+import java.util.Properties;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
@@ -10,13 +14,18 @@ public class EcoDriveApp extends JFrame {
     private JTable tabela;
     private DefaultTableModel modeloTabela;
 
-    private String url = "jdbc:mysql://localhost:3306/ecodrive_db";
-    private String usuario = "root"; 
-    private String senha = "root"; 
+    // a conexão vem do config.properties (fora do Git), nunca do código
+    private final String url;
+    private final String usuario;
+    private final String senha;
 
     private int idSelecionado = -1;
 
-    public EcoDriveApp() {
+    public EcoDriveApp(Properties config) {
+        url = config.getProperty("db.url");
+        usuario = config.getProperty("db.user");
+        senha = config.getProperty("db.password");
+
         setTitle("EcoDrive - Gestão de Frota");
         setSize(750, 450);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -56,28 +65,8 @@ public class EcoDriveApp extends JFrame {
         tabela = new JTable(modeloTabela);
         add(new JScrollPane(tabela), BorderLayout.CENTER);
 
-        btnSalvar.addActionListener(e -> {
-            String sql="";
-            if (idSelecionado == -1) {
-                sql = "INSERT INTO veiculos (marca, modelo, placa, ano, quilometragem) VALUES ('"
-                    + txtMarca.getText() + "', '" + txtModelo.getText() + "', '" + txtPlaca.getText() + "', "
-                    + Integer.parseInt(txtAno.getText()) + ", " + Integer.parseInt(txtKm.getText()) + ")";
-            }
-            else {
-                sql = "UPDATE veiculos SET marca='" + txtMarca.getText() + "', modelo='" + txtModelo.getText() 
-                       + "', placa='" + txtPlaca.getText() + "', ano=" + Integer.parseInt(txtAno.getText()) 
-                       + ", quilometragem=" + Integer.parseInt(txtKm.getText()) + " WHERE id=" + idSelecionado;
-            }
-            try (Connection conexao = DriverManager.getConnection(url, usuario, senha);
-                 Statement statement = conexao.createStatement()) {
-                statement.executeUpdate(sql);
-                JOptionPane.showMessageDialog(this, "Veículo cadastrado com sucesso!");
-                limparCampos();
-                atualizarTabela();
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this, "Erro ao salvar: " + ex.getMessage());
-            }
-        });
+        // Salvar cadastra um veículo novo, ou atualiza o selecionado
+        btnSalvar.addActionListener(e -> salvar());
 
         tabela.getSelectionModel().addListSelectionListener(e -> {
             int linha = tabela.getSelectedRow();
@@ -96,19 +85,7 @@ public class EcoDriveApp extends JFrame {
                 JOptionPane.showMessageDialog(this, "Selecione um veículo na tabela para atualizar.");
                 return;
             }
-            String sql = "UPDATE veiculos SET marca='" + txtMarca.getText() + "', modelo='" + txtModelo.getText() 
-                       + "', placa='" + txtPlaca.getText() + "', ano=" + Integer.parseInt(txtAno.getText()) 
-                       + ", quilometragem=" + Integer.parseInt(txtKm.getText()) + " WHERE id=" + idSelecionado;
-
-            try (Connection conexao = DriverManager.getConnection(url, usuario, senha);
-                 Statement statement = conexao.createStatement()) {
-                statement.executeUpdate(sql);
-                JOptionPane.showMessageDialog(this, "Veículo atualizado com sucesso!");
-                limparCampos();
-                atualizarTabela();
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this, "Erro ao atualizar: " + ex.getMessage());
-            }
+            salvar();
         });
 
         btnExcluir.addActionListener(e -> {
@@ -116,11 +93,8 @@ public class EcoDriveApp extends JFrame {
                 JOptionPane.showMessageDialog(this, "Selecione um veículo na tabela para excluir.");
                 return;
             }
-            String sql = "DELETE FROM veiculos WHERE id = " + idSelecionado;
-
-            try (Connection conexao = DriverManager.getConnection(url, usuario, senha);
-                 Statement statement = conexao.createStatement()) {
-                statement.executeUpdate(sql);
+            try (Connection conexao = conectar()) {
+                excluir(conexao, idSelecionado);
                 JOptionPane.showMessageDialog(this, "Veículo excluído com sucesso!");
                 limparCampos();
                 atualizarTabela();
@@ -134,13 +108,79 @@ public class EcoDriveApp extends JFrame {
         atualizarTabela();
     }
 
+    private Connection conectar() throws SQLException {
+        return DriverManager.getConnection(url, usuario, senha);
+    }
+
+    private void salvar() {
+        int ano, km;
+        try {
+            ano = Integer.parseInt(txtAno.getText().trim());
+            km = Integer.parseInt(txtKm.getText().trim());
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Ano e KM precisam ser números inteiros.");
+            return;
+        }
+        String marca = txtMarca.getText().trim();
+        String modelo = txtModelo.getText().trim();
+        String placa = txtPlaca.getText().trim();
+
+        try (Connection conexao = conectar()) {
+            if (idSelecionado == -1) {
+                inserir(conexao, marca, modelo, placa, ano, km);
+                JOptionPane.showMessageDialog(this, "Veículo cadastrado com sucesso!");
+            } else {
+                atualizar(conexao, idSelecionado, marca, modelo, placa, ano, km);
+                JOptionPane.showMessageDialog(this, "Veículo atualizado com sucesso!");
+            }
+            limparCampos();
+            atualizarTabela();
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao salvar: " + ex.getMessage());
+        }
+    }
+
+    // Os valores vão por parâmetro (?), nunca colados no texto do SQL:
+    // assim o que for digitado nos campos não vira comando no banco (SQL injection).
+    static void inserir(Connection conexao, String marca, String modelo, String placa, int ano, int km) throws SQLException {
+        String sql = "INSERT INTO veiculos (marca, modelo, placa, ano, quilometragem) VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = conexao.prepareStatement(sql)) {
+            ps.setString(1, marca);
+            ps.setString(2, modelo);
+            ps.setString(3, placa);
+            ps.setInt(4, ano);
+            ps.setInt(5, km);
+            ps.executeUpdate();
+        }
+    }
+
+    static void atualizar(Connection conexao, int id, String marca, String modelo, String placa, int ano, int km) throws SQLException {
+        String sql = "UPDATE veiculos SET marca = ?, modelo = ?, placa = ?, ano = ?, quilometragem = ? WHERE id = ?";
+        try (PreparedStatement ps = conexao.prepareStatement(sql)) {
+            ps.setString(1, marca);
+            ps.setString(2, modelo);
+            ps.setString(3, placa);
+            ps.setInt(4, ano);
+            ps.setInt(5, km);
+            ps.setInt(6, id);
+            ps.executeUpdate();
+        }
+    }
+
+    static void excluir(Connection conexao, int id) throws SQLException {
+        try (PreparedStatement ps = conexao.prepareStatement("DELETE FROM veiculos WHERE id = ?")) {
+            ps.setInt(1, id);
+            ps.executeUpdate();
+        }
+    }
+
     private void atualizarTabela() {
         modeloTabela.setRowCount(0);
-        String sql = "SELECT * FROM veiculos";
+        String sql = "SELECT id, marca, modelo, placa, ano, quilometragem FROM veiculos ORDER BY id";
 
-        try (Connection conexao = DriverManager.getConnection(url, usuario, senha);
-             Statement statement = conexao.createStatement();
-             ResultSet rs = statement.executeQuery(sql)) {
+        try (Connection conexao = conectar();
+             PreparedStatement ps = conexao.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
                 int id = rs.getInt("id");
@@ -153,6 +193,7 @@ public class EcoDriveApp extends JFrame {
                 modeloTabela.addRow(new Object[]{id, marca, modelo, placa, ano, km});
             }
         } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao carregar os veículos: " + ex.getMessage());
         }
     }
 
@@ -162,7 +203,24 @@ public class EcoDriveApp extends JFrame {
         tabela.clearSelection();
     }
 
+    static Properties carregarConfig() throws IOException {
+        Properties config = new Properties();
+        try (InputStream in = new FileInputStream("config.properties")) {
+            config.load(in);
+        }
+        return config;
+    }
+
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new EcoDriveApp().setVisible(true));
+        Properties config;
+        try {
+            config = carregarConfig();
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(null,
+                    "Arquivo config.properties não encontrado na pasta do projeto.\n"
+                    + "Copie o config.properties.example e preencha com os dados do seu MySQL.");
+            return;
+        }
+        SwingUtilities.invokeLater(() -> new EcoDriveApp(config).setVisible(true));
     }
 }

@@ -8,7 +8,7 @@ Aplicação desktop para cadastrar e acompanhar a frota de uma empresa: marca, m
 
 ## O que este projeto mostra
 
-- CRUD completo ligado a um banco MySQL via JDBC.
+- CRUD completo ligado a um banco MySQL via JDBC, com `PreparedStatement`.
 - Tabela da tela sincronizada com o banco.
 - Placa única no banco (`UNIQUE`), para não cadastrar o mesmo veículo duas vezes.
 
@@ -19,7 +19,8 @@ Pequenas e médias empresas com frota própria costumam perder o controle de qui
 ## Arquitetura
 
 - **Interface (Swing):** `JFrame` com `BorderLayout` e `GridLayout`; campos `JTextField` para marca, modelo, placa, ano e KM; `JTable` com `DefaultTableModel`; um `ListSelectionListener` preenche os campos quando uma linha é selecionada.
-- **Conexão (JDBC):** `mysql-connector-j` com a API `java.sql` (`Connection`, `Statement`, `ResultSet`).
+- **Conexão (JDBC):** `mysql-connector-j` com a API `java.sql` (`Connection`, `PreparedStatement`, `ResultSet`). Os valores digitados vão como parâmetros (`?`), nunca colados no texto do SQL, o que protege contra SQL injection.
+- **Configuração:** URL, usuário e senha do banco ficam no `config.properties`, fora do Git.
 - **Banco (MySQL):** banco `ecodrive_db` com a tabela `veiculos`.
 
 ## Operações
@@ -55,7 +56,7 @@ CREATE TABLE IF NOT EXISTS veiculos (
 Pré-requisitos: JDK 17+, MySQL 8 e o driver [MySQL Connector/J](https://dev.mysql.com/downloads/connector/j/) (`.jar`).
 
 1. Rode `script.sql` no MySQL.
-2. Em `EcoDriveApp.java`, ajuste o usuário e a senha do seu MySQL nas variáveis de conexão.
+2. Copie `config.properties.example` para `config.properties` (mesma pasta) e preencha o usuário e a senha do seu MySQL.
 3. Com o `.jar` do Connector/J na mesma pasta do `EcoDriveApp.java`:
    - Windows: `java -cp "mysql-connector-j.jar;." EcoDriveApp.java`
    - Linux/macOS: `java -cp "mysql-connector-j.jar:." EcoDriveApp.java`
@@ -67,5 +68,4 @@ Os slides com o estudo de caso estão em `EcoDrive Apresentacao.pdf`.
 ## Próximos passos
 
 - [ ] Separar o código em camadas (`model`, `dao`, `ui`), como no RH Folha e no Clínica Vida
-- [ ] Ler a conexão de um arquivo de configuração fora do Git, em vez de deixar no código
 - [ ] Registro de manutenções e alerta por quilometragem

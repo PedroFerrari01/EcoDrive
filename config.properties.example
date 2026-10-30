@@ -1,0 +1,5 @@
+# Copie para config.properties (mesma pasta) e preencha com os dados do seu MySQL.
+# O config.properties fica fora do Git (.gitignore) porque guarda senha.
+db.url=jdbc:mysql://localhost:3306/ecodrive_db?useSSL=false&serverTimezone=UTC
+db.user=seu_usuario
+db.password=sua_senha
